@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>JSON转换工具</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="./json2table.index.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+</head>
+<body>
+   <div id="app">
+        <div class="left-panel">
+            <div class="panel-header">
+                <h3 class="panel-title">
+                    <el-icon><Document /></el-icon>
+                    <span>JSON数据处理</span>
+                </h3>
+            </div>
+            
+            <div class="action-buttons">
+                <el-upload
+                    :auto-upload="false"
+                    :show-file-list="false"
+                    :on-change="handleFileChange"
+                >
+                    <el-button type="primary" size="small">
+                        <el-icon><Upload /></el-icon>
+                        上传文件
+                    </el-button>
+                </el-upload>
+                <el-button 
+                    type="success" 
+                    size="small"
+                    :loading="state.treeLoading"
+                    @click="parseJSON"
+                >
+                    <el-icon><Sunrise /></el-icon>
+                    解析JSON
+                </el-button>
+            </div>
+            
+            <el-input
+                v-model="state.jsonInput"
+                type="textarea"
+                :rows="8"
+                placeholder="粘贴 JSON 内容"
+                @keyup.ctrl.enter="parseJSON"
+                @paste="handlePaste"
+            ></el-input>
+            
+            <div class="panel-header">
+                <h3 class="panel-title">
+                    <el-icon><List /></el-icon>
+                    <span>JSON结构树</span>
+                </h3>
+            </div>
+            
+            <!-- 字段选择树 -->
+            <el-tree
+                ref="fieldTreeRef"
+                v-loading="state.treeLoading"
+                v-show="state.rootNode"
+                class="json-tree"
+                :data="treeData"
+                node-key="path"
+                :props="treeProps"
+                :expand-on-click-node="false"
+                :default-expanded-keys="defaultExpandedKeys"
+                :load="loadTreeNode"
+                lazy
+                @node-click="handleNodeClick"
+                @node-expand="handleNodeExpand"
+                @node-collapse="handleNodeCollapse"
+            >
+                <!-- 自定义节点内容 -->
+                <template #default="{ node, data }">
+                    <div class="tree-node-content">
+                        <!-- 添加展开/折叠图标 -->
+                        <span 
+                            class="expand-icon" 
+                            @click.stop="toggleNodeExpand(node)"
+                        >
+                            <el-icon v-if="node.expanded">
+                                <ArrowDown />
+                            </el-icon>
+                            <el-icon v-else>
+                                <ArrowRight />
+                            </el-icon>
+                        </span>
+                        
+                        <span class="node-name" @click.stop="handleNodeSelect(data, node)">
+                            {{ data.name }}
+                        </span>
+                        
+                        <!-- 显示类型标签 -->
+                        <el-tag v-if="data.type" size="small" class="type-tag" :type="getTagType(data.type)">
+                            {{ getTypeLabel(data.type) }}
+                        </el-tag>
+                        
+                        <!-- 对象预览 -->
+                        <span v-if="data.type === 'object' && data.keys" class="node-value-preview">
+                            {{ `{ ${data.keys ? data.keys.length : 0} keys }` }}
+                        </span>
+                        
+                        <!-- 数组预览 -->
+                        <span v-if="data.type === 'array'" class="node-value-preview">
+                            {{ `[ ${data.length} items ]` }}
+                        </span>
+                        
+                        <!-- 基础值预览 -->
+                        <span v-if="isBasicType(data.type) && data.value !== undefined" class="node-value-preview">
+                            {{ formatPreviewValue(data.value) }}
+                        </span>
+                        
+                        <!-- 如果是数组元素，显示索引 -->
+                        <span v-if="data.isArrayItem" class="array-index">[{{ data.index }}]</span>
+                    </div>
+                </template>
+            </el-tree>
+        </div>
+        
+        <!-- 右侧表格区域 -->
+        <div class="right-panel">
+            <div class="panel-header">
+                <h3 class="panel-title">
+                    <el-icon><List /></el-icon>
+                    <span>数据视图</span>
+                </h3>
+            </div>
+            
+            <!-- 独立提示容器 -->
+            <div class="alert-container">
+                <el-alert
+                    v-if="state.errorMsg"
+                    :title="state.errorMsg"
+                    type="error"
+                    show-icon
+                    closable
+                    @close="state.errorMsg = ''"
+                />
+            </div>
+            
+            <div class="data-section">
+                <!-- 主数据视图 -->
+                <template v-if="!state.currentNode">
+                    <!-- 当数据是对象且不是数组时，使用描述列表展示 -->
+                    <div v-if="state.isObjectView" class="detail-view">
+                        <h3>根节点 <el-tag size="small">对象</el-tag></h3>
+                        <div class="descriptions-view">
+                            <div class="descriptions-header">属性列表</div>
+                            <template v-for="(value, key) in state.objectData" :key="key">
+                                <div class="descriptions-item">
+                                    <div class="descriptions-item-label">{{ key }}</div>
+                                    <div class="descriptions-item-value">
+                                        <span>{{ formatObjectValue(value) }}</span>
+                                        <el-tag v-if="value !== null" size="mini">{{ getValueType(value) }}</el-tag>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    
+                    <!-- 当数据是数组时，使用表格展示 -->
+                    <template v-else-if="state.isArrayView">
+                        <div class="table-container">
+                            <el-table
+                                v-loading="state.tableLoading"
+                                :data="state.tableData"
+                                border
+                                stripe
+                                style="width: 100%; height: 100%"
+                            >
+                            <template #empty>
+                                <div class="custom-empty">
+                                    <el-icon class="custom-empty-icon"><Document /></el-icon>
+                                    <p>暂无数据，请先输入或上传JSON文件</p>
+                                </div>
+                            </template>
+                            <el-table-column 
+                                v-for="field in state.selectedFields"
+                                :key="field"
+                                :prop="field"
+                            >
+                                <!-- 使用内联SVG图标 -->
+                                <template #header="{ column }">
+                                    <div class="column-header">
+                                        <span>{{ formatHeader(field) }}</span>
+                                        <el-tooltip
+                                            effect="dark"
+                                            content="复制整列"
+                                            placement="top"
+                                        >
+                                            <span 
+                                                class="copy-column-btn" 
+                                                @click="copyColumnData(field)"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor">
+                                                    <path d="M8 4v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2h-8c-1.1 0-2 .9-2 2zm10 4v12h-8V4h8zM4 8h2v10h10v2H6c-1.1 0-2-.9-2-2V8z"/>
+                                                </svg>
+                                            </span>
+                                        </el-tooltip>
+                                    </div>
+                                </template>
+                                <template #default="{ row }">
+                                    <template v-if="row[field] !== undefined">
+                                        <span v-if="!isComplexValue(row[field])">
+                                            {{ formatSimpleValue(row[field]) }}
+                                        </span>
+                                        <el-tooltip
+                                            v-else
+                                            effect="light"
+                                            placement="top"
+                                            :disabled="!isComplexValue(row[field])"
+                                        >
+                                            <span class="nested-cell">
+                                                {{ formatComplexValue(row[field]) }}
+                                            </span>
+                                            <template #content>
+                                                <pre>{{ formatTooltip(row[field]) }}</pre>
+                                            </template>
+                                        </el-tooltip>
+                                    </template>
+                                    <span v-else class="null-value">N/A</span>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                        </div>
+                    </template>
+                </template>
+                
+                <!-- 节点详情视图 -->
+                <div v-if="state.currentNode" class="detail-view">
+                    <h3>{{ state.currentNode.name }} <el-tag size="small">{{ state.currentNode.type }}</el-tag></h3>
+                    
+                    <!-- 对象类型的值使用描述列表展示 -->
+                    <div v-if="state.currentNode.type === 'object' && state.currentNode.value" class="descriptions-view">
+                        <div class="descriptions-header">属性列表</div>
+                        <template v-for="(value, key) in state.currentNode.value" :key="key">
+                            <div class="descriptions-item">
+                                <div class="descriptions-item-label">{{ key }}</div>
+                                <div class="descriptions-item-value">
+                                    <span>{{ formatObjectValue(value) }}</span>
+                                    <el-tag v-if="value !== null" size="mini">{{ getValueType(value) }}</el-tag>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <!-- 数组类型的值使用表格展示 -->
+                    <div v-else-if="state.currentNode.type === 'array' && Array.isArray(state.currentNode.value)">
+                        <div class="table-container">
+                            <el-table
+                                :data="state.currentNode.value"
+                                border
+                                stripe
+                                style="width: 100%"
+                            >
+                                <el-table-column type="index" width="50" label="序号">
+                                    <template #default="{ $index }">
+                                        {{ $index + 1 }}
+                                    </template>
+                                </el-table-column>
+                                <el-table-column v-if="isSimpleArray(state.currentNode.value)" label="值">
+                                    <template #default="{ row }">
+                                        {{ row }}
+                                    </template>
+                                </el-table-column>
+                                <template v-else>
+                                    <!-- 修复：正确遍历键名数组 -->
+                                    <el-table-column 
+                                        v-for="(key, index) in getFirstArrayItemKeys(state.currentNode.value)"
+                                        :key="index"
+                                        :prop="key"
+                                        :label="key"
+                                    >
+                                        <template #header="{ column }">
+                                            <div class="column-header">
+                                                <span>{{ key }}</span>
+                                                <el-tooltip
+                                                    effect="dark"
+                                                    content="复制整列"
+                                                    placement="top"
+                                                >
+                                                    <span 
+                                                        class="copy-column-btn" 
+                                                        @click="copyColumnData(key)"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor">
+                                                            <path d="M8 4v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2h-8c-1.1 0-2 .9-2 2zm10 4v12h-8V4h8zM4 8h2v10h10v2H6c-1.1 0-2-.9-2-2V8z"/>
+                                                        </svg>
+                                                    </span>
+                                                </el-tooltip>
+                                            </div>
+                                        </template>
+                                        <template #default="{ row }">
+                                            {{ formatObjectValue(row[key]) }}
+                                        </template>
+                                    </el-table-column>
+                                </template>
+                            </el-table>
+                        </div>
+                    </div>
+                    
+                    <!-- 基本类型的值直接显示 -->
+                    <div v-else-if="isBasicType(state.currentNode.type)" style="margin-top: 15px;">
+                        <div class="descriptions-item">
+                            <div class="descriptions-item-label">值</div>
+                            <div class="descriptions-item-value">
+                                <span>{{ state.currentNode.value }}</span>
+                            </div>
+                        </div>
+                        <div class="descriptions-item">
+                            <div class="descriptions-item-label">类型</div>
+                            <div class="descriptions-item-value">
+                                <el-tag size="small">{{ state.currentNode.type }}</el-tag>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <div id="perf-warning" class="large-data-warning" style="display: none; position: fixed; bottom: 20px; right: 20px;">
+      <el-icon><Warning /></el-icon>
+      <span>检测到大数据集处理中，请稍候...</span>
+   </div>
+    </div>
+    <script src="./json2table.index.js"></script>
+    <script>
+        // 创建用于解析的 Web Worker
+        window.jsonParserWorker = new Worker(URL.createObjectURL(new Blob([`
+            self.addEventListener('message', function(e) {
+                try {
+                    const jsonData = JSON.parse(e.data);
+                    postMessage({ rootNode: createRootNode(jsonData) });
+                } catch (error) {
+                    postMessage({ type: 'error', message: 'Worker解析失败: ' + error.message });
+                }
+                
+                function createRootNode(rawData) {
+                    const detectType = (value) => {
+                        if (Array.isArray(value)) return 'array';
+                        if (value === null) return 'null';
+                        if (typeof value === 'object') return 'object';
+                        return typeof value;
+                    };
+                    
+                    const createNode = (path, name, type, value, parentPath = '', isArrayItem = false, index = -1) => {
+                        const node = {
+                            path,
+                            name,
+                            type,
+                            value,
+                            parentPath,
+                            isArrayItem,
+                            index,
+                            loaded: false,
+                            children: [],
+                            keys: type === 'object' && value ? Object.keys(value) : null,
+                            length: type === 'array' && value ? value.length : 0,
+                            hasChildren: false
+                        };
+                        
+                        // 安全处理null值
+                        if (value === null) {
+                            node.isLeaf = true;
+                            node.hasChildren = false;
+                            return node;
+                        }
+                        
+                        if (type === 'array' && value && value.length > 0) {
+                            node.hasChildren = true;
+                            node.isLeaf = false;
+                        } else if (type === 'object' && value && Object.keys(value).length > 0) {
+                            node.hasChildren = true;
+                            node.isLeaf = false;
+                        } else {
+                            node.isLeaf = true;
+                            node.hasChildren = false;
+                        }
+                        
+                        return node;
+                    };
+                    
+                    const dataType = detectType(rawData);
+                    let rootNode = createNode('root', '根节点', dataType, rawData);
+                    
+                    // 创建初始子节点
+                    if (dataType === 'array' && Array.isArray(rawData)) {
+                        // 处理数组根节点
+                        rootNode.children = rawData.slice(0, 100).map((item, idx) => {
+                            const childType = detectType(item);
+                            const childPath = \`root[\${idx}]\`;
+                            const childName = \`[\${idx}]\`;
+                            return createNode(childPath, childName, childType, item, 'root', true, idx);
+                        });
+                        
+                        if (rawData.length > 100) {
+                            rootNode.children.push({
+                                path: 'root.more',
+                                name: \`[查看更多...共\${rawData.length}项]\`,
+                                type: 'more',
+                                parentPath: 'root',
+                                isLeaf: true,
+                                totalItems: rawData.length
+                            });
+                        }
+                    } else if (dataType === 'object' && rawData) {
+                        // 处理对象根节点
+                        const entries = Object.entries(rawData);
+                        rootNode.children = entries.slice(0, 100).map(([key, val]) => {
+                            const childType = detectType(val);
+                            const childPath = \`root.\${key}\`;
+                            return createNode(childPath, key, childType, val, 'root');
+                        });
+                        
+                        if (entries.length > 100) {
+                            rootNode.children.push({
+                                path: 'root.more',
+                                name: \`{查看更多...共\${entries.length}键}\`,
+                                type: 'more',
+                                parentPath: 'root',
+                                isLeaf: true,
+                                totalItems: entries.length
+                            });
+                        }
+                    }
+                    
+                    return rootNode;
+                }
+            });
+        `])));
+    </script>
+</body>
+</html>

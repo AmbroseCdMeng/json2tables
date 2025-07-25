@@ -1,0 +1,425 @@
+/* 全局样式优化 */
+:root {
+    --primary-color: #409eff;
+    --success-color: #67c23a;
+    --warning-color: #e6a23c;
+    --danger-color: #f56c6c;
+    --info-color: #909399;
+    --bg-color: rgba(255, 255, 255, 0.85);
+    --border-color: #ebeef5;
+    --text-color: #606266;
+    --light-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --font-size-sm: 12px;
+    --font-size-md: 13px;
+    --font-size-lg: 14px;
+}
+
+/* 添加全局磨砂背景 */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('https://www.transparenttextures.com/patterns/light-wool.png');
+    background-size: 300px;
+    opacity: 0.2;
+    z-index: -1;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
+    color: var(--text-color);
+    font-size: var(--font-size-md);
+}
+
+#app {
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
+    box-sizing: border-box;
+    position: relative;
+    backdrop-filter: blur(2px);
+}
+
+/* 面板样式优化 */
+.left-panel {
+    width: 320px;
+    background: var(--bg-color);
+    border-right: 1px solid var(--border-color);
+    padding: 15px;
+    overflow: auto;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--light-shadow);
+    backdrop-filter: blur(5px);
+    border-radius: 0 8px 8px 0;
+}
+
+.right-panel {
+    flex: 1;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-color);
+    backdrop-filter: blur(5px);
+}
+
+.panel-header {
+    margin: 10px 5px 0px 5px;
+}
+
+.panel-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 5px 0;
+}
+
+/* 按钮样式优化 */
+.action-buttons {
+    margin: 10px 0;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.el-button {
+    font-weight: 500;
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.3s ease;
+    padding: 8px 12px;
+    font-size: var(--font-size-sm);
+}
+
+.el-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+}
+
+.el-button--primary {
+    background: linear-gradient(to right, var(--primary-color), #66b1ff);
+    border: none;
+}
+
+.el-button--success {
+    background: linear-gradient(to right, var(--success-color), #85ce61);
+    border: none;
+}
+
+/* 输入框样式优化 */
+.el-textarea {
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    box-shadow: var(--light-shadow);
+}
+
+.el-textarea__inner {
+    font-family: 'Fira Code', monospace;
+    padding: 12px;
+    font-size: var(--font-size-sm);
+    transition: all 0.3s;
+    border: none;
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.el-textarea__inner:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+/* 树形控件优化 */
+.json-tree {
+    margin-top: 10px;
+    flex: 1;
+    border-radius: 6px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.7);
+    box-shadow: var(--light-shadow);
+}
+
+.el-tree {
+    background: transparent;
+    font-size: var(--font-size-sm);
+}
+
+.el-tree-node__content {
+    height: 32px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.el-tree-node__content:hover {
+    background-color: rgba(240, 247, 255, 0.7);
+}
+
+.tree-node-content {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0 4px;
+    font-size: var(--font-size-sm);
+}
+
+.type-tag {
+    margin-left: 6px;
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 3px;
+}
+
+.node-value-preview {
+    font-size: 11px;
+    color: var(--info-color);
+    margin-left: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 150px;
+    display: inline-block;
+    vertical-align: bottom;
+}
+
+.array-index {
+    font-size: 11px;
+    color: var(--info-color);
+    margin-left: 4px;
+    background: rgba(245, 247, 250, 0.7);
+    padding: 0 3px;
+    border-radius: 2px;
+}
+
+/* 右侧面板样式优化 */
+.alert-container {
+    flex-shrink: 0;
+    /* padding: 8px 15px; */
+    padding: 4px 0px;
+}
+
+.data-section {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 0 15px 15px;
+}
+
+.detail-view {
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 8px;
+    box-shadow: var(--light-shadow);
+    margin: 8px 0;
+    overflow: auto;
+    /* height: calc(100% - 70px); */
+    height: calc(100% - 0px);
+    border: 1px solid var(--border-color);
+    font-size: var(--font-size-sm);
+}
+
+.detail-view h3 {
+    margin-top: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-color);
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: var(--font-size-md);
+    margin-bottom: 12px;
+}
+
+.table-container {
+    flex: 1;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 6px;
+    box-shadow: var(--light-shadow);
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.el-table {
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: var(--font-size-sm);
+}
+
+.el-table__header {
+    background: rgba(245, 247, 250, 0.7);
+    font-size: var(--font-size-sm);
+}
+
+/* 描述列表样式优化 */
+.descriptions-view {
+    margin-top: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.7);
+    font-size: var(--font-size-sm);
+}
+
+.descriptions-header {
+    background: rgba(248, 250, 252, 0.7);
+    padding: 10px 12px;
+    font-weight: 500;
+    color: var(--text-color);
+    border-bottom: 1px solid var(--border-color);
+    font-size: var(--font-size-sm);
+}
+
+.descriptions-item {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.descriptions-item-label {
+    width: 180px;
+    padding: 10px 12px;
+    background: rgba(250, 251, 252, 0.7);
+    color: var(--text-color);
+    font-weight: 500;
+    border-right: 1px solid var(--border-color);
+    font-size: var(--font-size-sm);
+}
+
+.descriptions-item-value {
+    flex: 1;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--font-size-sm);
+}
+
+.descriptions-item:last-child {
+    border-bottom: none;
+}
+
+/* 列头样式优化 */
+.column-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: var(--font-size-sm);
+}
+
+.copy-column-btn {
+    cursor: pointer;
+    margin-left: 6px;
+    opacity: 0.5;
+    transition: opacity 0.3s;
+    font-size: var(--font-size-sm);
+    color: var(--text-color);
+    display: flex;
+}
+
+.el-table__header tr:hover .copy-column-btn {
+    opacity: 1;
+}
+
+/* 空数据样式优化 */
+.custom-empty {
+    padding: 30px 0;
+    color: var(--info-color);
+    font-size: var(--font-size-sm);
+    text-align: center;
+}
+
+.custom-empty-icon {
+    font-size: 36px;
+    color: #c0c4cc;
+    margin-bottom: 12px;
+}
+
+/* 性能警告样式 */
+.large-data-warning {
+    background-color: rgba(253, 246, 236, 0.9);
+    border-left: 4px solid var(--warning-color);
+    padding: 10px 15px;
+    border-radius: 6px;
+    display: none;
+    align-items: center;
+    z-index: 2000;
+    box-shadow: var(--light-shadow);
+    max-width: 300px;
+    position: fixed;
+    bottom: 15px;
+    right: 15px;
+    font-size: var(--font-size-sm);
+}
+
+.large-data-warning .el-icon {
+    font-size: 20px;
+    margin-right: 10px;
+    color: var(--warning-color);
+}
+
+/* 响应式调整 */
+@media (max-width: 992px) {
+    #app {
+        flex-direction: column;
+    }
+    
+    .left-panel {
+        width: 100%;
+        height: 50%;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        border-radius: 0 0 8px 8px;
+    }
+    
+    .right-panel {
+        height: 50%;
+    }
+}
+
+/* 树节点内容 */
+.tree-node-content {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    cursor: pointer;
+}
+
+/* 展开/折叠图标 */
+.expand-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-right: 6px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.expand-icon:hover {
+    color: var(--primary-color);
+}
+
+/* 节点名称 */
+.node-name {
+    flex: 1;
+    padding: 4px 0;
+}
+
+/* 悬停效果 */
+.node-name:hover {
+    color: var(--primary-color);
+}
